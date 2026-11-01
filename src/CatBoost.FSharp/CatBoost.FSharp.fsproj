@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Types.fs" />
+        <Compile Include="Parameters.fs" />
+        <Compile Include="Api.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CatBoost.Core\CatBoost.Core.fsproj" />
+    </ItemGroup>
+
+</Project>

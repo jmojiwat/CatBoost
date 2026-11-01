@@ -430,3 +430,4 @@ _ReSharper*/           # Exclude ReSharper files
 
 # CatBoost native libraries, downloaded at build time by src/FsCatBoost/FsCatBoost.fsproj
 src/FsCatBoost/runtimes/
+src/CatBoost.Core/runtimes/

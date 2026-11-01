@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="CatBoost.Core/CatBoost.Core.fsproj" />
+  <Project Path="CatBoost.FSharp/CatBoost.FSharp.fsproj" />
+  <Project Path="CatBoost.FSharp.Tests/CatBoost.FSharp.Tests.fsproj">
+    <Configuration Solution="Release|Any CPU" Project="Release|Any CPU|NoBuild" />
+  </Project>
+</Solution>
