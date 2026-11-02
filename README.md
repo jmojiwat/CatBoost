@@ -1,15 +1,20 @@
-# FsCatBoost
+# CatBoost for F#
 
 A thin F# wrapper around the [CatBoost](https://catboost.ai) model applier C API: load a trained `.cbm` model and make predictions from .NET.
 
-FsCatBoost only **applies** models. Train them with CatBoost's Python or R package or its command-line tool, then save them in CatBoost's binary format (`.cbm`).
+This library only **applies** models. Train them with CatBoost's Python or R package or its command-line tool, then save them in CatBoost's binary format (`.cbm`).
 
 ## Requirements
 
 - .NET 10
-- One of `win-x64`, `linux-x64`, `linux-arm64` or macOS (`x64` and `arm64`). The CatBoost 1.2.10 native library for each platform is included in the NuGet package, so nothing else needs installing.
+- One of `win-x64`, `linux-x64`, `linux-arm64` or macOS (`x64` and `arm64`). The CatBoost 1.2.10 native library for each platform is included in the `CatBoost.Core` package, so nothing else needs installing.
 
-FsCatBoost isn't published on NuGet yet. Reference `src/FsCatBoost/FsCatBoost.fsproj` from your project, or build a package with `dotnet pack` (see [Building from source](#building-from-source)).
+It's split into two projects:
+
+- **`CatBoost.FSharp`** — the idiomatic F# API (`CatBoost.FSharp.Api`) and its types (`PredictionType`, `ModelInfoKey`, `ModelMetadata`, …). This is the one to reference.
+- **`CatBoost.Core`** — the raw P/Invoke declarations, the `SafeHandle`s that own native objects, and the native libraries. `CatBoost.FSharp` depends on it.
+
+Neither is published on NuGet yet. Reference `src/CatBoost.FSharp/CatBoost.FSharp.fsproj` from your project, or build packages with `dotnet pack` (see [Building from source](#building-from-source)).
 
 ## Example
 
@@ -17,7 +22,8 @@ Predict whether a person earns over 50K a year with the model from CatBoost's [m
 
 ```fsharp
 open FsToolkit.ErrorHandling
-open FsCatBoost.Api
+open CatBoost.FSharp
+open CatBoost.FSharp.Api
 
 let probabilityOver50K =
     result {
@@ -52,6 +58,7 @@ Probability of earning over 50K: 0.0010
 - **Disposal:** `modelCalcerCreate` returns a `SafeHandle` that owns the native model. Bind it with `use` / `use!` so it's freed promptly.
 - **Argument order:** the model handle is always the last argument, so calls pipe: `modelCalcerCreate () |> loadFullModelFromFile path`.
 - **Features:** numeric features are `float32[,]` and categorical or text features are `string[,]`, one row per object. Columns must follow the order the model was trained on. Pass an empty array (`Array2D.zeroCreate rows 0`) for a feature type the model doesn't use. Predictions come back as `float[,]`: one row per object, one column per prediction dimension.
+- **Model information:** `getModelMetadata` returns a `ModelMetadata` record with the tree count, the count of each feature type and the used feature names in one call. `getModelInfoValue` takes a `ModelInfoKey` (`CatboostVersionInfo`, `ModelGuid`, `Params`, `TrainFinishTime`, `Training`, `OutputOptions`).
 - **Prediction type:** raw values (`RawFormulaVal`) are the default. Call `setPredictionType` with `Probability`, `Class`, `Exponent`, `MultiProbability` or `RMSEWithUncertainty` to get something else.
 
 Functions map one-to-one onto the C API, named in camelCase (`CalcModelPrediction` → `calcModelPrediction`):
@@ -61,7 +68,7 @@ Functions map one-to-one onto the C API, named in camelCase (`CalcModelPredictio
 | Loading | `modelCalcerCreate`, `loadFullModelFromFile`, `loadFullModelFromBuffer`, `loadFullModelZeroCopy` |
 | Prediction | `calcModelPrediction`, `calcModelPredictionSingle`, `calcModelPredictionFlat`, `calcModelPredictionFlatTransposed`, `calcModelPredictionText`, `calcModelPredictionTextAndEmbeddings`, `calcModelPredictionWithHashedCatFeatures`, `*Staged` variants, `predictSpecificClass*` |
 | Settings | `setPredictionType`, `setPredictionTypeString`, `enableGPUEvaluation`, `getSupportedEvaluatorTypes` |
-| Model information | `getTreeCount`, `getDimensionsCount`, `getPredictionDimensionsCount`, `get{Float,Cat,Text,Embedding}FeaturesCount`, `get{Float,Cat,Text,Embedding}FeatureIndices`, `getModelUsedFeaturesNames`, `getModelInfoValue`, `checkModelMetadataHasKey` |
+| Model information | `getModelMetadata`, `getTreeCount`, `getDimensionsCount`, `getPredictionDimensionsCount`, `get{Float,Cat,Text,Embedding}FeaturesCount`, `get{Float,Cat,Text,Embedding}FeatureIndices`, `getModelUsedFeaturesNames`, `getModelInfoValue`, `getModelInfoValueSize`, `checkModelMetadataHasKey` |
 | Hashing | `getStringCatFeatureHash`, `getIntegerCatFeatureHash` |
 
 For what each function does, see the doc comments in CatBoost's [`c_api.h`](https://github.com/catboost/catboost/blob/v1.2.10/catboost/libs/model_interface/c_api.h).
@@ -70,14 +77,15 @@ For what each function does, see the doc comments in CatBoost's [`c_api.h`](http
 
 ```powershell
 cd src
-dotnet build FsCatBoost.slnx
-dotnet test --solution FsCatBoost.slnx
-dotnet pack FsCatBoost\FsCatBoost.fsproj -o <output folder>
+dotnet build CatBoost.slnx
+dotnet test --solution CatBoost.slnx
+dotnet pack CatBoost.Core\CatBoost.Core.fsproj -o <output folder>
+dotnet pack CatBoost.FSharp\CatBoost.FSharp.fsproj -o <output folder>
 ```
 
-The native libraries aren't committed to this repository. The first build downloads them from the [CatBoost 1.2.10 release](https://github.com/catboost/catboost/releases/tag/v1.2.10) and checks each against a SHA-256 stored in `FsCatBoost.fsproj`, so it needs internet access.
+The native libraries aren't committed to this repository. The first build downloads them from the [CatBoost 1.2.10 release](https://github.com/catboost/catboost/releases/tag/v1.2.10) and checks each against a SHA-256 stored in `CatBoost.Core.fsproj`, so it needs internet access. The native libraries are packed into the `CatBoost.Core` package under `runtimes/<rid>/native/`.
 
-The tests are ports of CatBoost's [.NET tests](https://github.com/catboost/catboost/blob/master/catboost/dotnet/CatBoostNetTests/CatBoostModelEvaluatorTest.cs), its [Java tutorial](https://github.com/catboost/tutorials/blob/master/apply_model/java/src/main/java/CatBoost4jPredictionTutorial.java) and [catboost-cgo](https://github.com/mirecl/catboost-cgo)'s tests.
+Run the tests in Debug: `CatBoost.slnx` doesn't build the test project (`CatBoost.FSharp.Tests`) in Release. They are ports of CatBoost's [.NET tests](https://github.com/catboost/catboost/blob/master/catboost/dotnet/CatBoostNetTests/CatBoostModelEvaluatorTest.cs), its [Java tutorial](https://github.com/catboost/tutorials/blob/master/apply_model/java/src/main/java/CatBoost4jPredictionTutorial.java) and [catboost-cgo](https://github.com/mirecl/catboost-cgo)'s tests.
 
 ## License
 

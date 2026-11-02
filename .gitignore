@@ -428,6 +428,5 @@ FodyWeavers.xsd
 _ReSharper*/           # Exclude ReSharper files
 *.[Rr]e[Ss]harper      # Exclude additional ReSharper artifacts
 
-# CatBoost native libraries, downloaded at build time by src/FsCatBoost/FsCatBoost.fsproj
-src/FsCatBoost/runtimes/
+# CatBoost native libraries, downloaded at build time by src/CatBoost.Core/CatBoost.Core.fsproj
 src/CatBoost.Core/runtimes/

@@ -1,6 +1,0 @@
-<Solution>
-  <Project Path="FsCatBoost.Tests/FsCatBoost.Tests.fsproj">
-    <Configuration Solution="Release|Any CPU" Project="Release|Any CPU|NoBuild" />
-  </Project>
-  <Project Path="FsCatBoost/FsCatBoost.fsproj" />
-</Solution>
